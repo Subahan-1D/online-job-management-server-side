@@ -1,9 +1,9 @@
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 require("dotenv").config();
 const app = express();
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 9000;
 
 // MIDDLEWARE
 app.use(cors());
@@ -21,15 +21,36 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    const jobsCollection =client.db('soloSphere').collection('servicesJobs');
-    const bidsCollection =client.db('soloSphere').collection('servicesBids');
-    
-    // Get All Data Service jobs From db
-   app.get('/servicesJobs', async(req,res)=>{
-    const result = await jobsCollection.find().toArray()
-    res.send(result)
+    const jobsCollection = client.db("soloSphere").collection("servicesJobs");
+    const bidsCollection = client.db("soloSphere").collection("servicesBids");
 
-   })
+    // Get All Data Service jobs From db
+    app.get("/servicesJobs", async (req, res) => {
+      const result = await jobsCollection.find().toArray();
+      res.send(result);
+    });
+
+    // Get a single data
+    app.get("/job/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await jobsCollection.findOne(query);
+      res.send(result);
+    });
+
+    // save a bid data in db
+    app.post("/bid",async (req,res)=>{
+      const bidData = req.body
+      const result = await bidsCollection.insertOne(bidData)
+      res.send(result)
+    });
+
+    // save a jobs data in db
+    app.post('/job', async (req,res)=>{
+      const jobData = req.body;
+      const result = await jobsCollection.insertOne(jobData)
+      res.send(result)
+    })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
