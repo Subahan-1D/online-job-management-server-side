@@ -50,6 +50,13 @@ async function run() {
       const jobData = req.body;
       const result = await jobsCollection.insertOne(jobData)
       res.send(result)
+    });
+    // get jobs user of spacic user 
+    app.get('/jobs/:email', async (req,res)=>{
+      const email = req.params.email;
+      const query = {'buyer.email':email}
+      const result = await jobsCollection.find(query).toArray()
+      res.send(result)
     })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
