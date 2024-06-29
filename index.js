@@ -80,6 +80,17 @@ async function run() {
       const result = await jobsCollection.updateOne(query, updateDoc, options);
       res.send(result);
     });
+
+    // part 2
+
+    // get all bids data from email or  db
+    app.get('/my-bids/:email', async (req,res)=>{
+      const email = req.params.email
+      const query = {email : email}
+      const result = await bidsCollection.find(query).toArray()
+      res.send(result)
+    })
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
