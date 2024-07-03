@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 9000;
@@ -14,6 +15,7 @@ const corsOptions = {
 
 //MIDDLEWARE
 app.use(cors(corsOptions));
+app.use(cookieParser())
 app.use(express.json());
 
 // console.log(process.env.ACCESS_TOKEN_SECRET)
@@ -34,13 +36,29 @@ async function run() {
     const bidsCollection = client.db("soloSphere").collection("servicesBids");
 
     // jwt generate
-
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET,{
         expiresIn:'1h'});
-      res.send({token})
+      res.cookie('token',token,{
+        httpOnly:true,
+        secure:process.env.NODE_ENV === 'production',
+        sameSite:process.env.NODE_ENV === 'production' ? 'none' : 'strict'
+      }).send({success: true})
     });
+  
+    // clear token logOut
+   app.get('/logout', (req, res) =>{
+      res
+        .clearCookie("token", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+          maxAge: 0,
+        })
+        .send({ success: true });
+
+   })
 
     // Get All Data Service jobs From db
     app.get("/servicesJobs", async (req, res) => {
@@ -71,6 +89,8 @@ async function run() {
     });
     // get jobs user of spacic user
     app.get("/jobs/:email", async (req, res) => {
+      const token = req.cookies?.token
+      console.log(token)
       const email = req.params.email;
       const query = { "buyer.email": email };
       const result = await jobsCollection.find(query).toArray();
