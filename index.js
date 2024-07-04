@@ -18,6 +18,27 @@ app.use(cors(corsOptions));
 app.use(cookieParser())
 app.use(express.json());
 
+// verifyToken jwt
+
+const verifyToken = (req,res,next)=>{
+   const token = req.cookies?.token;
+   console.log(token)
+   if(!token) return res.status(401).send({message:"unauthorized access"})
+   if (token) {
+     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+       if (err) {
+         console.log(err);
+         res.status(401).send({ message: "unauthorized access" });
+       }
+       console.log(decoded);
+       req.user = decoded
+        next();
+     });
+   }
+
+}
+
+
 // console.log(process.env.ACCESS_TOKEN_SECRET)
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.yqmtelq.mongodb.net/?appName=Cluster0`;
@@ -61,7 +82,7 @@ async function run() {
    })
 
     // Get All Data Service jobs From db
-    app.get("/servicesJobs", async (req, res) => {
+    app.get("/servicesJobs",async (req, res) => {
       const result = await jobsCollection.find().toArray();
       res.send(result);
     });
@@ -82,22 +103,24 @@ async function run() {
     });
 
     // save a jobs data in db
-    app.post("/job", async (req, res) => {
+    app.post("/job",  async (req, res) => {
       const jobData = req.body;
       const result = await jobsCollection.insertOne(jobData);
       res.send(result);
     });
     // get jobs user of spacic user
-    app.get("/jobs/:email", async (req, res) => {
-      const token = req.cookies?.token
-      console.log(token)
+    app.get("/jobs/:email", verifyToken, async (req, res) => {
+      const tokenEmail = req.user.email
       const email = req.params.email;
+      if(tokenEmail !== email){
+       return res.status(403).send({ message: "forbidden access" });
+      }
       const query = { "buyer.email": email };
       const result = await jobsCollection.find(query).toArray();
       res.send(result);
     });
     // get a delete data
-    app.delete("/job/:id", async (req, res) => {
+    app.delete("/job/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await jobsCollection.deleteOne(query);
@@ -129,8 +152,9 @@ async function run() {
       res.send(result);
     });
     // Get all data or bid request from db owner
-    app.get("/bid-request/:email", async (req, res) => {
+    app.get("/bid-request/:email",verifyToken, async (req, res) => {
       const email = req.params.email;
+      console.log(email)
       const query = { "buyer.email": email };
       const result = await bidsCollection.find(query).toArray();
       res.send(result);
