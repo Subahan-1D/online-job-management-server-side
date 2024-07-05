@@ -96,8 +96,19 @@ async function run() {
     });
 
     // save a bid data in db
-    app.post("/bid", async (req, res) => {
+    app.post("/bid", verifyToken, async (req, res) => {
       const bidData = req.body;
+      // check a duplicate request db
+      const query = {
+        email: bidData.email,
+        jobId: bidData.jobId,
+      };
+      const alreadyApplied = await bidsCollection.findOne(query)
+      console.log(alreadyApplied)
+      if(alreadyApplied){
+        return res.status(400)
+        .send('You have already place bid in this job')
+      }
       const result = await bidsCollection.insertOne(bidData);
       res.send(result);
     });
@@ -145,7 +156,7 @@ async function run() {
     // part 2
 
     // get all bids data from email or  db
-    app.get("/my-bids/:email", async (req, res) => {
+    app.get("/my-bids/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const result = await bidsCollection.find(query).toArray();
@@ -161,7 +172,7 @@ async function run() {
     });
 
     // Update Status in progres patch method
-    app.patch("/bid/:id", async (req, res) => {
+    app.patch("/bid/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const status = req.body;
       const query = { _id: new ObjectId(id) };
